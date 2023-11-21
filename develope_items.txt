@@ -1,0 +1,2 @@
+1. normalization
+2. cut image, merge to app
