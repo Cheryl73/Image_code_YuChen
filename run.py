@@ -1,6 +1,7 @@
 import image_pao
 import tkinter as tk
 from tkinter import filedialog
+import os
 
 
 def getfile(title = "select", types = [], action = "open", initial = "result"):
@@ -113,20 +114,19 @@ class appMenu(MainMenu):
         set_file = Menu("Save result file as")
         select_rst = Menu("Select result file")
         treat_rawdata = Menu("Treat raw data")
-        slice_image = Menu("Get sliced image")
+        slice_image = Menu("Get thickness image")
         set_factor = Menu("Set brightness factor")
         group_analyse = Menu("Analyse group result")
-        get_thickness_image = Menu("Get thickness image (.dat file)")
+        get_thickness_image = Menu("Get thickness map (.dat file)")
         get_overall_images = Menu("Get overall images")
         cross = Menu("Statistical analysis of overlapping pixels")
-        swap = Menu("Swep channels")
+        swap = Menu("Swap color of channels")
 
-
+        menu.add_child(get_overall_images)
         menu.add_child(treat_rawdata)
         menu.add_child(group_analyse)
-        menu.add_child(get_thickness_image)
-        menu.add_child(get_overall_images)
         menu.add_child(slice_image)
+        menu.add_child(get_thickness_image)
         menu.add_child(set_factor)
         menu.add_child(set_path)
         menu.add_child(set_file)
@@ -170,14 +170,13 @@ class appMenu(MainMenu):
                 datapath = self.datapath
             else:
                 datapath = getfile("Choose data directory", action="path")
-            savefile = getfile("Save as: ", action="save", types=['.yu'], initial="result_chan" + str(channel) + ".yu")
-            if not savefile or not datapath:
+            image_pao.make_dir(datapath)
+            file_path = getfile("Save as: ", action="save", types=['.yu'], initial="result_chan" + str(channel) + ".yu")
+            if not file_path or not datapath:
                 print("No path setting!")
                 return
-            image_pao.make_dir(datapath)
-            image_pao.treat_raw_data(datapath, savefile, chan=channel)
-            return datapath, savefile
-
+            image_pao.treat_raw_data(datapath, file_path, chan=channel)
+            return datapath, file_path
 
         @get_thickness_image.do
         def get_thickness_image():
@@ -289,7 +288,7 @@ class appMenu(MainMenu):
             order = []
             for o in os:
                 order.append(int(o))
-            image_pao.swep_channel(path, order=order)
+            image_pao.swap_channel(path, order=order)
 
     def _exit(self):
         return 1

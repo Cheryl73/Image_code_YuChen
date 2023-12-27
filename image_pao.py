@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from npTec import np2tec
 import tkinter as tk
 from tkinter import filedialog
+
 root = tk.Tk()
 root.withdraw()
 import os
@@ -16,12 +17,13 @@ from collections import defaultdict
 from skimage.segmentation import watershed as skwater
 from data_tree import data_tree
 
+
 class ImageProcessor:
     def __init__(self):
         pass
 
     @staticmethod
-    def save_figs(im_path, savepath, slice_dir = "Z", slice_idx = [], brightness_factor = [2,2,2]):
+    def save_figs(im_path, savepath, slice_dir="Z", slice_idx=[], brightness_factor=[2, 2, 2]):
         '''
 
         :param im_path: .czi file path
@@ -96,7 +98,7 @@ class ImageProcessor:
                     im_2 = img.get_image_data("ZX", C=2, T=0, Y=i) * brightness_factor[2]
                 except:
                     print("No channel 2")
-                    im_2 = im_G * 0
+                    im_2 = im_0 * 0
                 merged = cv.merge([im_0, im_1, im_2])
                 # merged = merged * brightness_factor
                 filename = name + "_Y_" + str(i) + ".tiff"
@@ -108,7 +110,6 @@ class ImageProcessor:
 
         print(str(len(items)) + " images saved!")
         return
-
 
     @staticmethod
     def showImage(title, img, ctype):
@@ -128,7 +129,6 @@ class ImageProcessor:
         plt.title(title)
         plt.show()
 
-
     @staticmethod
     def get_coverage(im):
         threshold, im2 = cv.threshold(im, 0, 1, cv.THRESH_OTSU)
@@ -136,7 +136,7 @@ class ImageProcessor:
         return area
 
     @staticmethod
-    def get_thickness(czi_path, method = "count", chan=0):
+    def get_thickness(czi_path, method="count", chan=0):
         img = AICSImage(czi_path)
         dim = img.dims
         thickness = np.zeros([dim.Y, dim.X])
@@ -146,7 +146,7 @@ class ImageProcessor:
         else:
             for x in tqdm(range(0, dim.X)):
                 for y in range(0, dim.Y):
-                    z_colum = im2[:,x,y]
+                    z_colum = im2[:, x, y]
                     space = ImageProcessor.get_range(z_colum)
                     thickness[x, y] = space[2]
         return thickness_
@@ -167,7 +167,7 @@ class ImageProcessor:
         return rst
 
     @staticmethod
-    def get_overall_Z(czi_path, channel = 0, save_path = None):
+    def get_overall_Z(czi_path, channel=0, save_path=None):
         img = AICSImage(czi_path)
         dim = img.dims
         im_all = 0
@@ -179,7 +179,7 @@ class ImageProcessor:
         return im_all
 
     @staticmethod
-    def get_overall_Z_max(czi_path, chan = 0, save_path = None):
+    def get_overall_Z_max(czi_path, chan=0, save_path=None):
         img = AICSImage(czi_path)
         dim = img.dims
         im_data = img.data[0, chan, :]
@@ -188,9 +188,8 @@ class ImageProcessor:
             matplotlib.image.imsave(save_path, im_all)
         return im_all
 
-
     @staticmethod
-    def count_cell(czi_path, channel = 0, save_path = None):
+    def count_cell(czi_path, channel=0, save_path=None):
         im_all = ImageProcessor.get_overall_Z_max(czi_path, channel)
         # ImageProcessor.showImage("Original", im_all, "rgb")
         # im_all = cv.cvtColor(im_all, cv.COLOR_BGR2GRAY)
@@ -234,7 +233,7 @@ class ImageProcessor:
 
         rst = []
         for i in range(2, np.max(markers) + 1):
-            idx = np.argwhere(markers==i)
+            idx = np.argwhere(markers == i)
             area = len(idx)
             y_min = np.min(idx[:, 0])
             y_max = np.max(idx[:, 0])
@@ -275,9 +274,8 @@ class ImageProcessor:
             # area2 = np.sum(im2_2)
             # print("origin:", area1, "     equalize:", area2)
             # print("threshold:", th)
-            rst[z,:,:] = im2
+            rst[z, :, :] = im2
         return rst
-
 
     @staticmethod
     def get_overall_mean(czi_path, channel=0):
@@ -323,7 +321,6 @@ class ImageProcessor:
 
         return im_all, im_ch0, im_ch1, im_ch2
 
-
     @staticmethod
     def statistic_ans(czi_path, overlap="layer", chan=0):
         '''
@@ -337,7 +334,7 @@ class ImageProcessor:
         # dim = img.dims
         if overlap == "max":
             im_all = ImageProcessor.get_overall_Z_max(czi_path, chan=chan)
-        # cv.imshow("lalala", im_all)
+            # cv.imshow("lalala", im_all)
             th, im2 = cv.threshold(im_all, 0, 1, cv.THRESH_OTSU)
             print("threshold for all image: ", th)
             area = np.count_nonzero(im2)
@@ -347,7 +344,8 @@ class ImageProcessor:
             area = np.count_nonzero(im2)
 
         name = ImageProcessor.get_filename(czi_path)
-        path = ''.join(czi_path.split("\\")[0:-1]) + "/result/binarize_images/" + "chan_" + str(chan) + '_' + name + ".tiff"
+        path = ''.join(czi_path.split("\\")[0:-1]) + "/result/binarize_images/" + "chan_" + str(
+            chan) + '_' + name + ".tiff"
         matplotlib.image.imsave(path, im2)
 
         # bi_z = ImageProcessor.binarize_Z(czi_path)
@@ -362,9 +360,9 @@ class ImageProcessor:
         thickness_mask = ImageProcessor.mask_thickness_by_area(thickness, im2)
         thickness_ave = np.sum(thickness_mask) / area
 
-        # im_all = ImageProcessor.get_overall_Z_max(czi_path, chan=chan)
-        # intensity = np.average(im_all)
-        intensity = ImageProcessor.get_overall_mean(czi_path, channel=chan)
+        im_all = ImageProcessor.get_overall_Z_max(czi_path, chan=chan)
+        intensity = np.average(im_all)
+        # intensity = ImageProcessor.get_overall_mean(czi_path, channel=chan)
 
         # cv.imshow("t1", thickness)
         # cv.imshow("t2", thickness_mask)
@@ -379,17 +377,16 @@ class ImageProcessor:
         return thickness * area_bi
 
     @staticmethod
-    def treat_raw_data(directory, filename="area_h_rst.pickle", overlap="layer", chan=0):
-        files = glob.glob(directory + "/*.czi")
-        output = os.path.join(directory, filename)
+    def treat_raw_data(data_directory, filepath, overlap="layer", chan=0):
+        files = glob.glob(data_directory + "/*.czi")
         rst = {}
         for f in files:
             a, h, I = ImageProcessor.statistic_ans(f, overlap=overlap, chan=chan)
             name = ImageProcessor.get_filename(f)
             rst[name] = (a, h, I)
-        with open(output, 'wb') as handle:
+        with open(filepath, 'wb') as handle:
             pickle.dump(rst, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        print("Data is treated and save as " + output)
+        print("Data is treated and save as " + filepath)
 
     @staticmethod
     def get_cross(czi_path, chans):
@@ -404,9 +401,8 @@ class ImageProcessor:
         return s
 
 
-def treat_raw_data(path, savepath="area_h_rst.pickle", overlap="layer", chan=0):
-    savepath = os.path.join(path, savepath)
-    ImageProcessor.treat_raw_data(path, savepath, overlap, chan=chan)
+def treat_raw_data(data_path, savepath, overlap="layer", chan=0):
+    ImageProcessor.treat_raw_data(data_path, savepath, overlap, chan=chan)
 
 
 def get_name_info(names):
@@ -439,7 +435,7 @@ def get_name_info(names):
     return info, smb
 
 
-def get_file_key(info:list[int, int, int], order, pre=None):
+def get_file_key(info: list[int, int, int], order, pre=None):
     '''
     Generate key from data information to get result from result file
     :param pre: prefix
@@ -495,7 +491,7 @@ def group_analyse(filepath):
                 area_i.append(area_)
                 h_i.append(h_)
                 v_i.append(v_)
-                print(c,s,i,area_, h_, v_)
+                print(c, s, i, area_, h_, v_)
             area_s.append(np.average(area_i))
             h_s.append(np.average(h_i))
             v_s.append(np.average(v_i))
@@ -505,7 +501,7 @@ def group_analyse(filepath):
         h_c.append(np.average(h_s))
         v_c.append(np.average(v_s))
         group[c]["mean"] = (np.average(area_s), np.average(h_s), np.average(v_s))
-        print(c,"mean ", group[c]["mean"])
+        print(c, "mean ", group[c]["mean"])
 
     rst_c = [group[c]["mean"] for c in concentrations]
     rst_area = [x[0] for x in rst_c]
@@ -624,9 +620,9 @@ def get_cross_info(rootpath, chans):
         ImageProcessor.get_cross(f, chans)
 
 
-def slice_image(rootpath, brightness_factor = [8, 16, 1], target_chan=1):
+def slice_image(rootpath, brightness_factor=[8, 16, 1], target_chan=1):
     files = glob.glob(rootpath + "/*.czi")
-    output = os.path.join(rootpath, "result/slice_images")
+    output = os.path.join(rootpath, "result/thickness_slices")
     # os.makedirs(output, exist_ok=True)
     for f in files:
         name = ImageProcessor.get_filename(f)
@@ -659,9 +655,9 @@ def slice_image(rootpath, brightness_factor = [8, 16, 1], target_chan=1):
                                  slice_idx=slices_y, brightness_factor=brightness_factor)
 
 
-def swep_channel(rootpath, order, suffix=".tiff"):
+def swap_channel(rootpath, order, suffix=".tiff"):
     files = glob.glob('**/*' + suffix, root_dir=rootpath, recursive=True)
-    for f in files:
+    for f in tqdm(files):
         filepath = os.path.join(rootpath, f)
         img = cv.imread(filepath)
         img_new = np.zeros(np.shape(img), dtype=img.dtype)
@@ -673,12 +669,11 @@ def swep_channel(rootpath, order, suffix=".tiff"):
         cv.imwrite(filepath, img_new)
 
 
-
 def make_dir(root):
     savepath = os.path.join(root, "result")
     all_image_path = os.path.join(savepath, "all_image")
     thickness_map_path = os.path.join(savepath, "thickness_map")
-    slice_image_path = os.path.join(savepath, "slice_images")
+    slice_image_path = os.path.join(savepath, "thickness_slices")
     binarize_img = os.path.join(savepath, "binarize_images")
     os.makedirs(all_image_path, exist_ok=True)
     os.makedirs(thickness_map_path, exist_ok=True)
@@ -703,7 +698,7 @@ if __name__ == '__main__':
     # print(rst)
     # path = "D:\pao\Data\\new2"
     # order = [2,1,0]
-    # swep_channel(path, order)
+    # swap_channel(path, order)
     # cells = ImageProcessor.count_cell(path, 1)
     # slices_x = []
     # slices_y = []
@@ -713,18 +708,5 @@ if __name__ == '__main__':
     #     y = int(0.5 * (span[2] + span[3]))
     #     slices_x.append(x)
     #     slices_y.append(y)
-    # ImageProcessor.save_figs(im_path=path, savepath="Data/new/result/slice_images/", slice_dir="X", slice_idx=slices_x, brightness_factor = 6)
-    # ImageProcessor.save_figs(im_path=path, savepath="Data/new/result/slice_images/", slice_dir="Y", slice_idx=slices_y, brightness_factor = 6)
-
-
-
-
-
-
-
-
-
-
-
-
-
+    # ImageProcessor.save_figs(im_path=path, savepath="Data/new/result/thickness_slices/", slice_dir="X", slice_idx=slices_x, brightness_factor = 6)
+    # ImageProcessor.save_figs(im_path=path, savepath="Data/new/result/thickness_slices/", slice_dir="Y", slice_idx=slices_y, brightness_factor = 6)
