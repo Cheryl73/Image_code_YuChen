@@ -118,8 +118,8 @@ class data_tree:
     def get_name_section(key):
         syb, num = data_tree.treat_name(key)
         if len(syb) != len(num):
-            print("Section number not match, check filename format!")
-            return
+            print("Warning: Section number not match, check filename format!")
+            # return
         rst = []
         for i, s in enumerate(syb):
             name = s + num[i]
@@ -142,12 +142,20 @@ class data_tree:
         rec(self.rt, '')
 
 
+class data_tree_cmb(data_tree):
+    def __init__(self, data_names):
+        super().__init__()
+        self.dataNames = data_names
+
+
+
+
 if __name__ == "__main__":
-    s1 = 's100k001n1'
-    val1 = 100
-    s2 = 's100k01n02'
+    s1 = 'skj_lhjk-%+-@#g$%-)k100k001n'
+    val1 = 500
+    s2 = 'skj_lhjk-%+-@#g$%-)k200k001n1'
     val2 = 200
-    s3 = 's200k1n1'
+    s3 = 'a1b'
     val3 = 400
     dt = data_tree()
     dt.add_data(s1, val1)

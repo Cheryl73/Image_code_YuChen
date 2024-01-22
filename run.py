@@ -121,9 +121,11 @@ class appMenu(MainMenu):
         get_overall_images = Menu("Get overall images")
         cross = Menu("Statistical analysis of overlapping pixels")
         swap = Menu("Swap color of channels")
+        read_data = Menu("read result file")
 
         menu.add_child(get_overall_images)
         menu.add_child(treat_rawdata)
+        menu.add_child(read_data)
         menu.add_child(group_analyse)
         menu.add_child(slice_image)
         menu.add_child(get_thickness_image)
@@ -166,6 +168,8 @@ class appMenu(MainMenu):
         def treat_rawdata():
             channel = input("Select channel for analysis(0, 1, 2, defult = 0): ", ) or "0" # original chan order: BGR
             channel = int(channel)
+            channel_cell = input("Select channel of cell(0, 1, 2, defult = 0): ", ) or "0" # original chan order: BGR
+            channel_cell = int(channel_cell)
             if self.datapath:
                 datapath = self.datapath
             else:
@@ -175,7 +179,9 @@ class appMenu(MainMenu):
             if not file_path or not datapath:
                 print("No path setting!")
                 return
-            image_pao.treat_raw_data(datapath, file_path, chan=channel)
+            image_pao.treat_raw_data(datapath, file_path, chan=channel, cell_chan=channel_cell)
+            print("Export result as .cxv file...")
+            image_pao.read_rst(file_path)
             return datapath, file_path
 
         @get_thickness_image.do
@@ -289,6 +295,12 @@ class appMenu(MainMenu):
             for o in os:
                 order.append(int(o))
             image_pao.swap_channel(path, order=order)
+
+
+        @read_data.do
+        def read():
+            filepath = getfile("Select result file", action="open")
+            image_pao.read_rst(filepath)
 
     def _exit(self):
         return 1
