@@ -153,6 +153,12 @@ class ImageProcessor:
         return thickness_
 
     @staticmethod
+    def get_dim(czi_path):
+        img = AICSImage(czi_path)
+        dim = img.dims
+        return [dim.X, dim.Y, dim.Z]
+
+    @staticmethod
     def get_range(arr):
         edge_l = -1
         edge_r = -1
@@ -246,7 +252,7 @@ class ImageProcessor:
         return rst, markers
 
     @staticmethod
-    def divide_cell(czi_path, target_chan, cell_chan,  save_path=None):
+    def divide_cell(czi_path, target_chan, cell_chan, save_path=None):
         positions, cell_map = ImageProcessor.count_cell(czi_path, channel=cell_chan)
         target_3d = ImageProcessor.binarize_Z(czi_path, chan=target_chan)
         cell_3d = ImageProcessor.binarize_Z(czi_path, chan=cell_chan)
@@ -254,7 +260,7 @@ class ImageProcessor:
         for i in range(2, np.max(cell_map) + 1):
             mask = np.zeros(cell_3d.shape)
             idx = np.argwhere(cell_map == i)
-            mask[:,idx[:,0], idx[:,1]] = 1
+            mask[:, idx[:, 0], idx[:, 1]] = 1
             cell_zone = cell_3d * mask
             target_zone = target_3d * mask
             cell_2D = np.max(cell_zone, axis=2)
@@ -263,8 +269,8 @@ class ImageProcessor:
             z_max = np.max(idx[:, 0])
             mid_idx = round(0.51 * (z_min + z_max))
             # target_2D = np.max(target_zone, axis=2)
-            up_side = target_zone[0:mid_idx,:,:]
-            down_side = target_zone[mid_idx:,:,:]
+            up_side = target_zone[0:mid_idx, :, :]
+            down_side = target_zone[mid_idx:, :, :]
             # area = np.sum(mask[0,:,:])
             area = positions[i - 2][0]
             volume_up = np.sum(up_side)
@@ -283,17 +289,15 @@ class ImageProcessor:
         idx = np.argwhere((cell_map == 0) | (cell_map == 1))
         mask[:, idx[:, 0], idx[:, 1]] = 1
         target_zone = target_3d * mask
-        area = np.sum(mask[0,:,:])
+        area = np.sum(mask[0, :, :])
         volume = np.sum(target_zone)
         thickness_single = volume / area
         single = [volume, thickness_single, area]
         rst_array = np.array(rst)
-        cell_zone_ave = np.average(rst_array,axis=0)
+        cell_zone_ave = np.average(rst_array, axis=0)
         # ImageProcessor.showImage("mask", mask[0,:,:], ctype='gray')
 
         return cell_zone_ave, single
-
-
 
     @staticmethod
     def get_filename(czi_path):
@@ -434,11 +438,12 @@ class ImageProcessor:
         for f in files:
             a, h, I = ImageProcessor.statistic_ans(f, overlap=overlap, chan=chan)
             cell_zone, single = ImageProcessor.divide_cell(f, target_chan=chan, cell_chan=cell_chan)
+            dims = ImageProcessor.get_dim(f)
             name = ImageProcessor.get_filename(f)
             thickness_up = cell_zone[2]
             thickness_down = cell_zone[3]
             thickness_single = single[1]
-            rst[name] = (a, h, I, thickness_single, thickness_down, thickness_up)
+            rst[name] = (a, h, I, thickness_single, thickness_down, thickness_up, dims)
         with open(filepath, 'wb') as handle:
             pickle.dump(rst, handle, protocol=pickle.HIGHEST_PROTOCOL)
         print("Data is treated and save as " + filepath)
@@ -456,7 +461,7 @@ class ImageProcessor:
         return s
 
 
-def treat_raw_data(data_path, savepath, overlap="layer", chan=0, cell_chan = 0):
+def treat_raw_data(data_path, savepath, overlap="layer", chan=0, cell_chan=0):
     ImageProcessor.treat_raw_data(data_path, savepath, overlap, chan=chan, cell_chan=cell_chan)
 
 
@@ -504,76 +509,6 @@ def get_file_key(info: list[int, int, int], order, pre=None):
     return code
 
 
-def group_analyse(filepath):
-    with open(filepath, 'rb') as handle:
-        rst = pickle.load(handle)
-    names = rst.keys()
-    if not names:
-        print("No result found, check result file!")
-        return
-    info, order = get_name_info(names)
-    concentrations = info[order[0]]
-    samples = info[order[1]]
-    images = info[order[2]]
-
-    area_c = []
-    h_c = []
-    v_c = []
-    pre = ''
-    group = {}
-    for c in concentrations:
-        group[c] = {}
-        area_s = []
-        h_s = []
-        v_s = []
-        for s in samples:
-            group[c][s] = {}
-            area_i = []
-            h_i = []
-            v_i = []
-            for i in images:
-                info = [c, s, i]
-                key = get_file_key(info, order=order, pre=pre)
-                if key not in rst:
-                    print(key, " not found")
-                    continue
-                cur = rst[key]
-                # print(key, " found")
-                area_ = cur[0]
-                h_ = np.sum(cur[1]) / area_
-                v_ = area_ * h_
-                group[c][s][i] = (area_, h_, v_)
-                area_i.append(area_)
-                h_i.append(h_)
-                v_i.append(v_)
-                print(c, s, i, area_, h_, v_)
-            area_s.append(np.average(area_i))
-            h_s.append(np.average(h_i))
-            v_s.append(np.average(v_i))
-            group[c][s]["mean"] = (np.average(area_i), np.average(h_i), np.average(v_i))
-            print(c, s, "mean ", group[c][s]["mean"])
-        area_c.append(np.average(area_s))
-        h_c.append(np.average(h_s))
-        v_c.append(np.average(v_s))
-        group[c]["mean"] = (np.average(area_s), np.average(h_s), np.average(v_s))
-        print(c, "mean ", group[c]["mean"])
-
-    rst_c = [group[c]["mean"] for c in concentrations]
-    rst_area = [x[0] for x in rst_c]
-    rst_t = [x[1] for x in rst_c]
-    rst_v = [x[2] for x in rst_c]
-    fig = plt.figure(1)
-    plt.plot(concentrations, rst_area, marker="o")
-    plt.title("area")
-    fig = plt.figure(2)
-    plt.plot(concentrations, rst_t, marker="o")
-    plt.title("thickness")
-    fig = plt.figure(3)
-    plt.plot(concentrations, rst_v, marker="o")
-    plt.title("Volume")
-    plt.show()
-
-
 def group_analyse2(filepath):
     with open(filepath, 'rb') as handle:
         rst = pickle.load(handle)
@@ -612,7 +547,8 @@ def read_rst(rst_path):
     if not names:
         print("No result found, check result file!")
         return
-    file_headers = ["Name", "Intensity", "Area", "Thickness_overall", "Thickness_single", "Thickness_down", "Thickness_up"]
+    file_headers = ["Name", "Intensity", "Area", "Thickness_overall", "Thickness_single", "Thickness_down",
+                    "Thickness_up", "Dimension"]
     filepath = os.path.splitext(rst_path)[0] + ".csv"
     names = rst.keys()
     n = len(names)
@@ -630,7 +566,8 @@ def read_rst(rst_path):
             thickness_single = dt[3]
             thickness_down = dt[4]
             thickness_up = dt[5]
-            writer.writerow([name, intensity, area, h, thickness_single, thickness_down, thickness_up])
+            dims = dt[6]
+            writer.writerow([name, intensity, area, h, thickness_single, thickness_down, thickness_up, dims])
     print("Result exported as " + filepath)
 
 
@@ -670,18 +607,6 @@ def get_thickness_image(rootpath, datapath):
 
 def get_overall_image(path, savepath):
     _ = ImageProcessor.get_overall_image(path, savepath)
-    # im_G = ImageProcessor.get_overall_Z_max(path, 0)
-    # im_B = ImageProcessor.get_overall_Z_max(path, 1)
-    # im_R = 0 * im_G
-    # im_G0 = cv.merge([im_R, im_G, im_R])
-    # im_B0 = cv.merge([im_B, im_R, im_R])
-    # im_all = cv.merge([im_B, im_G, im_R])
-    # path_all = savepath + "_all.tiff"
-    # path_B = savepath + "_B.tiff"
-    # path_G = savepath + "_G.tiff"
-    # cv.imwrite(path_all, im_all)
-    # cv.imwrite(path_B, im_B0)
-    # cv.imwrite(path_G, im_G0)
 
 
 def get_overall_images(rootpath):
@@ -751,7 +676,6 @@ def split_thickness(rootpath):
         os.makedirs(savepath, exist_ok=True)
 
 
-
 def swap_channel(rootpath, order, suffix=".tiff"):
     files = glob.glob('**/*' + suffix, root_dir=rootpath, recursive=True)
     for f in tqdm(files):
@@ -790,28 +714,7 @@ if __name__ == '__main__':
     # ImageProcessor.save_figs(path, "./result/image/")    # save image slice separately
     # path = "D:\\pao\\Data\\new\\A005F2I1.czi"
     path = "C:\\Users\\Administrator\\Downloads\\A005F2I1.czi"
+    rst = ImageProcessor.get_dim(path)
+    print(rst)
     # path = "/Users/nianhong/Downloads/A005F2I1.czi"
-    ImageProcessor.divide_cell(path, target_chan=0, cell_chan=1)
-    # a = 1
-    # a = np.zeros([5,3,3])
-    # b = np.array([[1,2],[0,0]])
-    # a[:,b[:,0], b[:,1]] = 5
-    # lalal = 1
-    # path = "D:\\pao\\Data\\new\\result_chan0.yu"
-    # read_rst(path)
-    # rst = ImageProcessor.get_cross(path, [0,1])
-    # print(rst)
-    # path = "D:\pao\Data\\new2"
-    # order = [2,1,0]
-    # swap_channel(path, order)
-    # cells = ImageProcessor.count_cell(path, 1)
-    # slices_x = []
-    # slices_y = []
-    # for cell in cells:
-    #     span = cell[1]
-    #     x = int(0.5 * (span[0] + span[1]))
-    #     y = int(0.5 * (span[2] + span[3]))
-    #     slices_x.append(x)
-    #     slices_y.append(y)
-    # ImageProcessor.save_figs(im_path=path, savepath="Data/new/result/thickness_slices/", slice_dir="X", slice_idx=slices_x, brightness_factor = 6)
-    # ImageProcessor.save_figs(im_path=path, savepath="Data/new/result/thickness_slices/", slice_dir="Y", slice_idx=slices_y, brightness_factor = 6)
+    # ImageProcessor.divide_cell(path, target_chan=0, cell_chan=1)
